@@ -14,9 +14,46 @@ class AGameGeneratedActor : public AActor
 {
 	GENERATED_UCLASS_BODY()
 
+		UFUNCTION(BlueprintCallable, Category = "GameGeneratedActor")
+		void SetMaterial(UMaterialInterface* Material);
+
+	UPROPERTY(EditAnywhere)
+		float YZ_angle;
+	UPROPERTY(EditAnywhere)
+		float XZ_angle;
+	UPROPERTY(EditAnywhere)
+		float XY_angle;
+	UPROPERTY(EditAnywhere)
+		float XW_angle;
+	UPROPERTY(EditAnywhere)
+		float YW_angle;
+	UPROPERTY(EditAnywhere)
+		float ZW_angle;
+
+	UPROPERTY(EditAnywhere)
+		bool use_YZ;
+	UPROPERTY(EditAnywhere)
+		bool use_XZ;
+	UPROPERTY(EditAnywhere)
+		bool use_XY;
+	UPROPERTY(EditAnywhere)
+		bool use_XW = true;
+	UPROPERTY(EditAnywhere)
+		bool use_YW = true;
+	UPROPERTY(EditAnywhere)
+		bool use_ZW = true;
+
+	UPROPERTY(EditAnywhere)
+		float theta1 = 1;
+	UPROPERTY(EditAnywhere)
+		float theta2 = 1;
+	UPROPERTY(EditAnywhere)
+		float theta3 = 1;
+
 private:
 	float RunningTime;
 	TArray<FCustomMeshTriangle> GetTriangles(float time);
+	FVector4 Rotate(FVector4 v, FVector4* m);
 	float DotProduct(FVector4 rhs, FVector4 lhs);
 	FVector4 Normalize(FVector4 v);
 	TArray<FVector> GetProjector(FVector4 planeNormal);

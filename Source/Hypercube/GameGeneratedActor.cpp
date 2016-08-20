@@ -2,6 +2,8 @@
 
 #include "Hypercube.h"
 #include "GameGeneratedActor.h"
+#include "DrawDebugHelpers.h"
+#include "math.h"
 
 AGameGeneratedActor::AGameGeneratedActor(const class FObjectInitializer& PCIP) : Super(PCIP)
 {
@@ -17,9 +19,15 @@ AGameGeneratedActor::AGameGeneratedActor(const class FObjectInitializer& PCIP) :
 TArray<FCustomMeshTriangle> AGameGeneratedActor::GetTriangles(float time) {
 	TArray<FCustomMeshTriangle> triangles;
 
-	FVector4 planeNormal = FVector4(1, 1, 1, 1);
+	FVector4 planeNormal = FVector4(sin(theta1)*sin(theta2)*sin(theta3),
+		sin(theta1)*sin(theta2)*cos(theta3),
+		sin(theta1)*cos(theta2),
+		cos(theta1)*cos(theta2));
 
 	TArray<FVector> projector = GetProjector(planeNormal);
+	projector.Reset(4);
+	FVector p[] = { FVector(1, 0, 0), FVector(0, 1, 0) , FVector(0, 0, 1) , FVector(0, 0, 0) };
+	projector.Append(p, ARRAYSIZE(p));
 
 	FCustomMeshTriangle tri;
 
@@ -45,7 +53,60 @@ TArray<FCustomMeshTriangle> AGameGeneratedActor::GetTriangles(float time) {
 							v[i] = a;
 							v[j] = b;
 							v[k] = c;
-							v[l] = d;
+							v[l] = d * c;
+
+							float angle = time / 5;
+
+							if (use_YZ)
+								YZ_angle = angle;
+							if (use_XZ)
+								XZ_angle = angle;
+							if (use_XY)
+								XY_angle = angle;
+							if (use_XW)
+								XW_angle = angle;
+							if (use_YW)
+								YW_angle = angle;
+							if (use_ZW)
+								ZW_angle = angle;
+
+							FVector4 YZ[] = { FVector4(1, 0, 0, 0),
+											  FVector4(0, cos(YZ_angle), sin(YZ_angle), 0),
+											  FVector4(0, -sin(YZ_angle), cos(YZ_angle), 0),
+											  FVector4(0, 0, 0, 1) };
+
+							FVector4 XZ[] = { FVector4(cos(XZ_angle), 0, -sin(XZ_angle), 0),
+											  FVector4(0, 1, 0, 0),
+											  FVector4(sin(XZ_angle), 0, cos(XZ_angle), 0),
+											  FVector4(0, 0, 0, 1) };
+
+							FVector4 XY[] = { FVector4(cos(XY_angle), sin(XY_angle), 0, 0),
+											  FVector4(-sin(XY_angle), cos(XY_angle), 0, 0),
+											  FVector4(0, 0, 1, 0),
+											  FVector4(0, 0, 0, 1) };
+
+							FVector4 XW[] = { FVector4(cos(XW_angle), 0, 0, -sin(XW_angle)),
+											  FVector4(0, 1, 0, 0),
+											  FVector4(0, 0, 1, 0),
+											  FVector4(sin(XW_angle), 0, 0, cos(XW_angle)) };
+
+							FVector4 YW[] = { FVector4(1, 0, 0, 0),
+											  FVector4(0, cos(YW_angle), 0, sin(YW_angle)),
+											  FVector4(0, 0, 1, 0),
+											  FVector4(0, -sin(YW_angle), 0, cos(YW_angle)) };
+
+							FVector4 ZW[] = { FVector4(1, 0, 0, 0),
+											  FVector4(0, 1, 0, 0),
+											  FVector4(0, 0, cos(ZW_angle), sin(ZW_angle)),
+											  FVector4(0, 0, -sin(ZW_angle), cos(ZW_angle)) };
+
+							v = Rotate(v, YZ);
+							v = Rotate(v, XZ);
+							v = Rotate(v, XY);
+							v = Rotate(v, XW);
+							v = Rotate(v, YW);
+							v = Rotate(v, ZW);
+
 							FVector projection = Project(v, projector);
 							vectors.Add(projection);
 
@@ -90,9 +151,15 @@ TArray<FCustomMeshTriangle> AGameGeneratedActor::GetTriangles(float time) {
 }
 
 TArray<FVector> AGameGeneratedActor::GetProjector(FVector4 planeNormal) {
-	FVector4 basis[] = { FVector4(planeNormal[0], 0.f, 0.f, -planeNormal[0] / planeNormal[3]) ,
-						FVector4(0.f, planeNormal[1], 0.f, -planeNormal[1] / planeNormal[3]) ,
-						FVector4(0.f, 0.f, planeNormal[2], -planeNormal[2] / planeNormal[3]) };
+	FVector4 basis[] = { FVector4(planeNormal[0], 0.f, 0.f, 0) ,
+						 FVector4(0.f, planeNormal[1], 0.f, 0) ,
+						 FVector4(0.f, 0.f, planeNormal[2], 0) };
+	if (planeNormal[3] != 0)
+	{
+		basis[0][3] = -planeNormal[0] / planeNormal[3];
+		basis[1][3] = -planeNormal[1] / planeNormal[3];
+		basis[2][3] = -planeNormal[2] / planeNormal[3];
+	}
 	basis[0] = Normalize(basis[0]);
 
 	basis[1] += -basis[0] * DotProduct(basis[0], basis[1]);
@@ -100,7 +167,7 @@ TArray<FVector> AGameGeneratedActor::GetProjector(FVector4 planeNormal) {
 
 	basis[2] += -basis[0] * DotProduct(basis[0], basis[2]);
 	basis[2] += -basis[1] * DotProduct(basis[1], basis[2]);
-	basis[2]  = Normalize(basis[2]);
+	basis[2] = Normalize(basis[2]);
 	FVector projector[] = { FVector(basis[0][0], basis[1][0], basis[2][0]),
 							FVector(basis[0][1], basis[1][1], basis[2][1]),
 							FVector(basis[0][2], basis[1][2], basis[2][2]),
@@ -110,6 +177,14 @@ TArray<FVector> AGameGeneratedActor::GetProjector(FVector4 planeNormal) {
 	return tprojector;
 }
 
+FVector4 AGameGeneratedActor::Rotate(FVector4 v, FVector4* m) {
+	FVector4 r;
+	for (int i = 0; i < 4; i++) {
+		r[i] = v[0] * m[0][i] + v[1] * m[1][i] + v[2] * m[2][i] + v[3] * m[3][i];
+	}
+	return r;
+}
+
 float AGameGeneratedActor::DotProduct(FVector4 rhs, FVector4 lhs)
 {
 	return rhs[0] * lhs[0] + rhs[1] * lhs[1] + rhs[2] * lhs[2] + rhs[3] * lhs[3];
@@ -117,7 +192,13 @@ float AGameGeneratedActor::DotProduct(FVector4 rhs, FVector4 lhs)
 
 FVector4 AGameGeneratedActor::Normalize(FVector4 v) {
 	float n = FGenericPlatformMath::Sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
-	return v / n;
+	if (n == 0) {
+		return FVector4(0, 0, 0, 0);
+	}
+	else
+	{
+		return v / n;
+	}
 }
 
 FVector AGameGeneratedActor::Project(FVector4 a, TArray<FVector> proj) {
@@ -128,10 +209,19 @@ FVector AGameGeneratedActor::Project(FVector4 a, TArray<FVector> proj) {
 }
 
 void AGameGeneratedActor::GenerateTriangles(FVector a, FVector b, FVector c, FVector d, TArray<FCustomMeshTriangle>& triangles) {
+	FVector aa = a * (AActor::GetActorScale() + 0.5f) + AActor::GetActorLocation();
+	FVector bb = b * (AActor::GetActorScale() + 0.5f) + AActor::GetActorLocation();
+	FVector cc = c * (AActor::GetActorScale() + 0.5f) + AActor::GetActorLocation();
+	FVector dd = d * (AActor::GetActorScale() + 0.5f) + AActor::GetActorLocation();
+
+
+	DrawDebugLine(GetWorld(), aa, bb, FColor::Black, false, -1, 0, 0.75f);
+	DrawDebugLine(GetWorld(), bb, cc, FColor::Black, false, -1, 0, 0.75f);
+	DrawDebugLine(GetWorld(), cc, dd, FColor::Black, false, -1, 0, 0.75f);
+	DrawDebugLine(GetWorld(), dd, aa, FColor::Black, false, -1, 0, 0.75f);
+
 	GenerateTriangles(a, b, c, triangles);
-	GenerateTriangles(b, c, d, triangles);
 	GenerateTriangles(c, d, a, triangles);
-	GenerateTriangles(d, a, c, triangles);
 }
 
 void AGameGeneratedActor::GenerateTriangles(FVector a, FVector b, FVector c, TArray<FCustomMeshTriangle>& triangles) {
@@ -164,4 +254,8 @@ void AGameGeneratedActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	RunningTime += DeltaTime;
 	((UCustomMeshComponent*)RootComponent)->SetCustomMeshTriangles(GetTriangles(RunningTime));
+}
+
+void AGameGeneratedActor::SetMaterial(UMaterialInterface* Material) {
+	((UCustomMeshComponent*)RootComponent)->SetMaterial(0, Material);
 }
